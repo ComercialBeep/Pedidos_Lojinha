@@ -1,0 +1,103 @@
+import pandas as pd
+from reportlab.lib.pagesizes import landscape, A4
+from reportlab.pdfgen import canvas
+
+# Função para criar o PDF com os dados
+def create_pdf(pedidos_nao_atendidos):
+    # Nome do arquivo PDF
+    filename = "pedidos_nao_atendidos.pdf"
+
+    # Configurar o canvas do PDF com tamanho A4 paisagem
+    c = canvas.Canvas(filename, pagesize=landscape(A4))
+    
+    # Definir margens e posição inicial
+    margin_left = 50
+    margin_bottom = 200
+    x_start = margin_left
+    y_start = A4[1] - 300  # Margem superior inicial maior
+    
+    # Título do documento
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(A4[1] / 2, y_start, "Relatório de Pedidos Não Atendidos por Estado")
+    y_start -= 30
+    
+    # Obter estados únicos
+    estados_unicos = pedidos_nao_atendidos['Estado de entrega'].unique()
+    
+    # Iterar sobre cada estado
+    for estado in estados_unicos:
+        # Filtrar pedidos não atendidos pelo estado atual
+        pedidos_estado_atual = pedidos_nao_atendidos[pedidos_nao_atendidos['Estado de entrega'] == estado].copy()
+        
+        # Calcular quantidade total por produto
+        pedidos_estado_atual['Produto'] = pedidos_estado_atual['Quant.'] * pedidos_estado_atual['Item']
+        
+        # Título do estado
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(x_start, y_start, f"Estado: {estado}")
+        y_start -= 20
+        
+        # Cabeçalho da tabela
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(x_start, y_start, "Nome do destinatário")
+        c.drawString(x_start + 150, y_start, "Número do pedido")
+        c.drawString(x_start + 300, y_start, "Obs. do cliente")
+        c.drawString(x_start + 450, y_start, "Quantidade")
+        c.drawString(x_start + 550, y_start, "Produto")
+        y_start -= 20
+        
+        # Linha horizontal
+        c.line(x_start, y_start, x_start + 600, y_start)
+        y_start -= 5
+        
+         # Ajuste para descer um pouco a primeira linha
+        y_start -= 10
+        
+        # Dados da tabela
+        c.setFont("Helvetica", 10)
+        for index, row in pedidos_estado_atual.iterrows():
+            c.drawString(x_start, y_start, str(row['Nome do destinatário']))
+            c.drawString(x_start + 150, y_start, str(row['Número do pedido']))
+            c.drawString(x_start + 300, y_start, str(row['Obs. do cliente']))
+            c.drawString(x_start + 450, y_start, str(row['Quant.']))
+            c.drawString(x_start + 550, y_start, str(row['Produto']))
+            y_start -= 15
+        
+        # Linha horizontal após os dados da tabela
+        y_start -= 10
+        c.line(x_start, y_start, x_start + 600, y_start)
+        y_start -= 20
+        
+        # Quantidade total por produto
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(x_start, y_start, "Quantidade Total por Produto:")
+        y_start -= 20
+        
+        c.setFont("Helvetica", 10)
+        for item, quantidade in pedidos_estado_atual.groupby('Item')['Quant.'].sum().items():
+            c.drawString(x_start + 20, y_start, f"{item}: {quantidade}")
+            y_start -= 15
+        
+        # Linha horizontal após quantidade total por produto
+        y_start -= 10
+        c.line(x_start, y_start, x_start + 600, y_start)
+        y_start -= 30
+        
+        # Verificar se é necessário adicionar uma nova página
+        if y_start < margin_bottom:
+            c.showPage()
+            y_start = A4[1] - 300  # Reiniciar a posição inicial com margem superior maior
+            margin_bottom = 200  # Definir uma nova margem inferior para a próxima página, se necessário
+    
+    # Salvar e fechar o PDF
+    c.save()
+    print(f"PDF gerado com sucesso: {filename}")
+
+# Carregar os dados do CSV
+tabela_lojinha = pd.read_csv(r"C:\Users\Beep Saude.BEEP1441\OneDrive\Documentos\Sales\Dash\Lojinha\Itens_comprados.csv")
+
+# Filtrar os pedidos não atendidos
+pedidos_nao_atendidos = tabela_lojinha[tabela_lojinha['Status do pedido'] == 'Não atendido']
+
+# Chamar a função para criar o PDF
+create_pdf(pedidos_nao_atendidos)
